@@ -1,0 +1,42 @@
+# Angular CICD Pipeline for bitbucket 
+
+image: node:18.10
+
+pipelines:
+  branches:
+    development:
+      - step: 
+          name: Build and Test
+          caches:
+            - node
+          script:
+            - npm install -g @angular/cli
+            - npm install
+            - ng build --configuration development
+            - ls
+          artifacts:
+            - dist/PROJECT_NAME/**
+      - step:
+          name: Security Scan
+          script:
+            - pipe: atlassian/git-secrets-scan:0.5.1
+      - step:
+          name: Deploy to Development
+          deployment: Development
+          clone:
+            enabled: false
+          script:
+            - pipe: atlassian/aws-s3-deploy:1.1.0
+              variables:
+                AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID
+                AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY
+                AWS_DEFAULT_REGION: $AWS_DEFAULT_REGION
+                S3_BUCKET: $S3_BUCKET
+                LOCAL_PATH: 'dist/sPROJECT_NAME/'
+            - pipe: atlassian/aws-cloudfront-invalidate:0.6.0
+              variables:
+                AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID
+                AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY
+                AWS_DEFAULT_REGION: $AWS_DEFAULT_REGION
+                DISTRIBUTION_ID: $DISTRIBUTION_ID
+
